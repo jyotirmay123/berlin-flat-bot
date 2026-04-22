@@ -7,6 +7,8 @@ source_name kept as "FurnishedFlats" for DB compatibility.
 """
 from __future__ import annotations
 
+from datetime import datetime
+
 import hashlib
 import re
 
@@ -32,7 +34,7 @@ HEADERS = {
 class FurnishedFlatsScraper(BaseScraper):
     source_name = "FurnishedFlats"  # kept for DB compat; actual source: tempoFLAT
 
-    async def fetch_listings(self) -> list[Listing]:
+    async def fetch_listings(self, since: datetime | None = None) -> list[Listing]:
         try:
             async with aiohttp.ClientSession(headers=HEADERS) as session:
                 async with session.get(

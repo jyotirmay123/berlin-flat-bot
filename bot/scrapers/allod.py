@@ -7,6 +7,8 @@ in their news or project pages.
 """
 from __future__ import annotations
 
+from datetime import datetime
+
 import hashlib
 import re
 
@@ -35,7 +37,7 @@ HEADERS = {
 class AllodScraper(BaseScraper):
     source_name = "Allod"
 
-    async def fetch_listings(self) -> list[Listing]:
+    async def fetch_listings(self, since: datetime | None = None) -> list[Listing]:
         listings: list[Listing] = []
         try:
             async with aiohttp.ClientSession(headers=HEADERS) as session:

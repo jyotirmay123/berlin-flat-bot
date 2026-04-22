@@ -7,6 +7,8 @@ source_name kept as "LivingInBerlin" for DB compatibility.
 """
 from __future__ import annotations
 
+from datetime import datetime
+
 import hashlib
 import re
 
@@ -32,7 +34,7 @@ HEADERS = {
 class LivingInBerlinScraper(BaseScraper):
     source_name = "LivingInBerlin"  # kept for DB compat; actual source: degewo
 
-    async def fetch_listings(self) -> list[Listing]:
+    async def fetch_listings(self, since: datetime | None = None) -> list[Listing]:
         try:
             async with aiohttp.ClientSession(headers=HEADERS) as session:
                 async with session.get(
@@ -79,13 +81,16 @@ class LivingInBerlinScraper(BaseScraper):
 
             text = container.get_text(" ", strip=True)
 
-            # Address: "[Street] | [District]"
+            # degewo format: "Merken Gemerkt {Street} | {District} {Title} ..."
             address = ""
-            address_el = container.select_one("[class*='address'], [class*='street'], h3, h2")
-            if address_el:
-                address = address_el.get_text(strip=True)
-            elif "|" in text:
-                address = text.split("|")[0].strip()[:80]
+            district_from_pipe = ""
+            if "|" in text:
+                before, after = text.split("|", 1)
+                # Strip "Merken Gemerkt" UI prefix that degewo injects
+                street = re.sub(r"^(?:Merken\s+Gemerkt\s*)+", "", before, flags=re.I).strip()
+                address = street[:80]
+                # First word(s) after the pipe are the sub-district
+                district_from_pipe = after.strip().split()[0] if after.strip() else ""
 
             # Warmmiete (warm rent = total monthly cost)
             # degewo uses German decimal format: "376,65 €" (comma = decimal separator)
@@ -110,13 +115,24 @@ class LivingInBerlinScraper(BaseScraper):
             if space_match:
                 space = int(float(space_match.group(1).replace(",", ".")))
 
-            # District: degewo apartments are all Berlin
-            district = "Berlin"
+            # District: prefer the sub-district extracted from "Street | SubDistrict Title"
+            district = district_from_pipe or "Berlin"
+            # Validate/expand via regex fallback covering all common Berlin sub-districts
             district_match = re.search(
-                r"(Mitte|Friedrichshain|Kreuzberg|Prenzlauer Berg|Charlottenburg|"
-                r"Wilmersdorf|Steglitz|Zehlendorf|Neukölln|Tempelhof|Schöneberg|"
-                r"Lichtenberg|Pankow|Spandau|Reinickendorf|Marzahn|Treptow|Köpenick|"
-                r"Hellersdorf|Weißensee|Hohenschönhausen)",
+                r"(Mitte|Moabit|Wedding|Gesundbrunnen|Tiergarten"
+                r"|Friedrichshain|Kreuzberg"
+                r"|Prenzlauer Berg|Pankow|Weißensee|Weissensee"
+                r"|Charlottenburg|Wilmersdorf|Westend|Halensee"
+                r"|Spandau|Staaken|Kladow|Gatow"
+                r"|Steglitz|Zehlendorf|Lichterfelde|Lankwitz|Wannsee"
+                r"|Tempelhof|Schöneberg|Schoeneberg|Mariendorf|Marienfelde|Lichtenrade"
+                r"|Neukölln|Neukoelln|Britz|Buckow|Rudow"
+                r"|Treptow|Köpenick|Koepenick|Adlershof|Grünau|Grunau"
+                r"|Friedrichshagen|Baumschulenweg|Johannisthal|Altglienicke"
+                r"|Marzahn|Hellersdorf|Biesdorf|Kaulsdorf|Mahlsdorf"
+                r"|Lichtenberg|Friedrichsfelde|Rummelsburg|Karlshorst|Fennpfuhl"
+                r"|Hohenschönhausen|Hohenschonhausen"
+                r"|Reinickendorf|Tegel|Wittenau|Hermsdorf|Frohnau|Heiligensee)",
                 text, re.I,
             )
             if district_match:

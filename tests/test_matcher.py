@@ -129,11 +129,79 @@ class TestLocalityFilter:
     def test_any_locality_matches_any_district(self):
         assert matches(make_listing(district="Neukölln"), make_user(locality="any"))
 
-    def test_matching_district_passes(self):
+    def test_exact_bezirk_match_passes(self):
         assert matches(make_listing(district="Mitte"), make_user(locality="Mitte"))
 
-    def test_wrong_district_fails(self):
+    def test_exact_bezirk_wrong_fails(self):
         assert not matches(make_listing(district="Neukölln"), make_user(locality="Mitte"))
+
+    # Sub-district → Bezirk normalization
+    def test_sub_district_maps_to_bezirk(self):
+        # "Friedrichshain" is in Bezirk "Friedrichshain-Kreuzberg"
+        assert matches(
+            make_listing(district="Friedrichshain"),
+            make_user(locality="Friedrichshain-Kreuzberg"),
+        )
+
+    def test_kreuzberg_maps_to_bezirk(self):
+        assert matches(
+            make_listing(district="Kreuzberg"),
+            make_user(locality="Friedrichshain-Kreuzberg"),
+        )
+
+    def test_charlottenburg_maps_to_bezirk(self):
+        assert matches(
+            make_listing(district="Charlottenburg"),
+            make_user(locality="Charlottenburg-Wilmersdorf"),
+        )
+
+    def test_schoeneberg_transliteration_maps(self):
+        assert matches(
+            make_listing(district="Schoeneberg"),
+            make_user(locality="Tempelhof-Schöneberg"),
+        )
+
+    def test_neukoelln_transliteration_maps(self):
+        assert matches(
+            make_listing(district="Neukoelln"),
+            make_user(locality="Neukölln"),
+        )
+
+    def test_marzahn_maps_to_bezirk(self):
+        assert matches(
+            make_listing(district="Marzahn"),
+            make_user(locality="Marzahn-Hellersdorf"),
+        )
+
+    def test_friedrichsfelde_maps_to_lichtenberg(self):
+        assert matches(
+            make_listing(district="Friedrichsfelde"),
+            make_user(locality="Lichtenberg"),
+        )
+
+    def test_prenzlauer_berg_maps_to_pankow(self):
+        assert matches(
+            make_listing(district="Prenzlauer Berg"),
+            make_user(locality="Pankow"),
+        )
+
+    def test_sub_district_wrong_bezirk_fails(self):
+        # "Charlottenburg" is NOT in Neukölln
+        assert not matches(
+            make_listing(district="Charlottenburg"),
+            make_user(locality="Neukölln"),
+        )
+
+    # "Berlin" and empty district are unknown → pass through
+    def test_berlin_fallback_passes_through_locality_filter(self):
+        assert matches(make_listing(district="Berlin"), make_user(locality="Neukölln"))
+
+    def test_empty_district_passes_through_locality_filter(self):
+        assert matches(make_listing(district=""), make_user(locality="Mitte"))
+
+    # IS24-style: quarter "Neukölln (Neukölln)" stripped in scraper → "Neukölln"
+    def test_neukoelln_proper_matches(self):
+        assert matches(make_listing(district="Neukölln"), make_user(locality="Neukölln"))
 
 
 class TestTauschwohnungFilter:

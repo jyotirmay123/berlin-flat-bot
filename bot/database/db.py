@@ -10,7 +10,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from bot.config import settings
-from bot.database.models import Base, ListingCache, SentListing, UserPreference
+from bot.database.models import Base, ListingCache, ScrapeState, SentListing, UserPreference
 
 engine = create_async_engine(settings.database_url, echo=False)
 async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
@@ -116,3 +116,25 @@ async def search_message_expired(user: UserPreference) -> bool:
     if sent_at.tzinfo is None:
         sent_at = sent_at.replace(tzinfo=timezone.utc)
     return sent_at < cutoff
+
+
+# ── Scrape-state helpers ─────────────────────────────────────────────────────
+
+_LAST_SCRAPE_KEY = "last_scrape_at"
+
+
+async def get_last_scrape_at() -> datetime | None:
+    async with get_session() as session:
+        row = await session.get(ScrapeState, _LAST_SCRAPE_KEY)
+        if row is None:
+            return None
+        return datetime.fromisoformat(row.value).replace(tzinfo=timezone.utc)
+
+
+async def set_last_scrape_at(dt: datetime) -> None:
+    async with get_session() as session:
+        row = await session.get(ScrapeState, _LAST_SCRAPE_KEY)
+        if row is None:
+            session.add(ScrapeState(key=_LAST_SCRAPE_KEY, value=dt.isoformat()))
+        else:
+            row.value = dt.isoformat()

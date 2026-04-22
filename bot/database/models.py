@@ -90,3 +90,10 @@ class ListingCache(Base):
     is_paywall: Mapped[bool] = mapped_column(Boolean, default=False)
     is_swap: Mapped[bool] = mapped_column(Boolean, default=False)
     first_seen_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class ScrapeState(Base):
+    __tablename__ = "scrape_state"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    value: Mapped[str] = mapped_column(String)

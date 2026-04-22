@@ -2,13 +2,21 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
 from loguru import logger
 
 from bot.config import settings
-from bot.database.db import already_sent, get_active_users, mark_sent, upsert_listing
+from bot.database.db import (
+    already_sent,
+    get_active_users,
+    get_last_scrape_at,
+    mark_sent,
+    set_last_scrape_at,
+    upsert_listing,
+)
 from bot.database.models import ListingCache
 from bot.matcher import matches
 from bot.scrapers.allod import AllodScraper
@@ -94,13 +102,22 @@ async def _send_to_user(bot: Bot, user_id: int, listing: Listing) -> None:
 
 async def run_scrape_cycle(bot: Bot) -> None:
     """One full scrape-match-notify cycle. Called by the scheduler."""
-    logger.info("Starting scrape cycle")
+    since = await get_last_scrape_at()
+    cycle_start = datetime.now(timezone.utc)
+    if since:
+        logger.info("Starting scrape cycle — fetching listings since {}", since.isoformat())
+    else:
+        logger.info("Starting scrape cycle — first run, fetching all visible listings")
 
     # Scrape all sources concurrently
     results = await asyncio.gather(
-        *[scraper.fetch_listings() for scraper in ALL_SCRAPERS],
+        *[scraper.fetch_listings(since=since) for scraper in ALL_SCRAPERS],
         return_exceptions=True,
     )
+
+    # Record cycle start time so the next cycle only fetches newer listings.
+    # Done immediately after scraping so we don't miss listings posted during processing.
+    await set_last_scrape_at(cycle_start)
 
     new_listings: list[Listing] = []
     for result in results:

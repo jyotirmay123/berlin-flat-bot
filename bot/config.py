@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     # How long (hours) an editable /search message stays active
     search_message_ttl_hours: int = 48
+    # ScrapFly API key — enables IS24 scraping by bypassing Cloudflare (optional)
+    scrapfly_key: str = ""
 
 
 settings = Settings()

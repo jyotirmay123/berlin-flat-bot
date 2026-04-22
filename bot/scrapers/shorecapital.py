@@ -6,6 +6,8 @@ The source_name is kept as "ShoreCapital" for DB compatibility.
 """
 from __future__ import annotations
 
+from datetime import datetime
+
 import hashlib
 import re
 
@@ -31,7 +33,7 @@ HEADERS = {
 class ShoreCapitalScraper(BaseScraper):
     source_name = "ShoreCapital"  # kept for DB compat; actual source: Wunderflats
 
-    async def fetch_listings(self) -> list[Listing]:
+    async def fetch_listings(self, since: datetime | None = None) -> list[Listing]:
         try:
             async with aiohttp.ClientSession(headers=HEADERS) as session:
                 async with session.get(

@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from datetime import datetime
 
 
 @dataclass
@@ -27,6 +28,10 @@ class BaseScraper(ABC):
     source_name: str = ""
 
     @abstractmethod
-    async def fetch_listings(self) -> list[Listing]:
-        """Return freshly scraped listings. Must not raise — catch internally."""
+    async def fetch_listings(self, since: datetime | None = None) -> list[Listing]:
+        """Return freshly scraped listings newer than `since` (UTC).
+
+        Pass None to fetch all currently visible listings (first-run behaviour).
+        Must not raise — catch internally.
+        """
         ...

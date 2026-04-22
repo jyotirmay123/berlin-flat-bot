@@ -7,6 +7,8 @@ source_name kept as "CityWohnen" for DB compatibility.
 """
 from __future__ import annotations
 
+from datetime import datetime
+
 import hashlib
 import re
 
@@ -34,7 +36,7 @@ HEADERS = {
 class CityWohnenScraper(BaseScraper):
     source_name = "CityWohnen"  # kept for DB compat; actual source: WG-Gesucht
 
-    async def fetch_listings(self) -> list[Listing]:
+    async def fetch_listings(self, since: datetime | None = None) -> list[Listing]:
         try:
             async with aiohttp.ClientSession(headers=HEADERS) as session:
                 async with session.get(

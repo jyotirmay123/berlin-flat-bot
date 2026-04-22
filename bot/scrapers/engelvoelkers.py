@@ -1,6 +1,8 @@
 """Engel & Völkers scraper — long-term rentals in Berlin."""
 from __future__ import annotations
 
+from datetime import datetime
+
 import hashlib
 import re
 
@@ -26,7 +28,7 @@ HEADERS = {
 class EngelVoelkersScraper(BaseScraper):
     source_name = "EngelVoelkers"
 
-    async def fetch_listings(self) -> list[Listing]:
+    async def fetch_listings(self, since: datetime | None = None) -> list[Listing]:
         try:
             async with aiohttp.ClientSession(headers=HEADERS) as session:
                 async with session.get(
