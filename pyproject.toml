@@ -1,0 +1,52 @@
+[tool.poetry]
+name = "berlin-flats-bot"
+version = "0.1.0"
+description = "Telegram bot for Berlin apartment search"
+authors = ["Prestatech"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+aiogram = "^3.13"
+sqlalchemy = "^2.0"
+aiosqlite = "^0.20"
+aiohttp = "^3.10"
+beautifulsoup4 = "^4.12"
+loguru = "^0.7"
+pydantic-settings = "^2.7"
+apscheduler = "^3.10"
+lxml = "^5.3"
+python-dotenv = "^1.0"
+greenlet = "^3.4.0"
+playwright = "^1.58.0"
+playwright-stealth = "^2.0.3"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3"
+pytest-asyncio = "^0.24"
+pytest-xdist = "^3.6"
+ruff = "^0.8"
+
+[tool.poetry.scripts]
+berlin-flats-bot = "bot.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-n auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["bot"]
