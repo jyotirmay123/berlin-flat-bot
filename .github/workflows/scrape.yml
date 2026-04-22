@@ -14,18 +14,20 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
 
       # Cache the poetry virtualenv keyed to the lock file so deps are
       # only reinstalled when poetry.lock changes.
       - name: Cache poetry virtualenv
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pypoetry/virtualenvs
           key: poetry-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
@@ -41,7 +43,7 @@ jobs:
       # Cache expires after 7 days of no access — on expiry the bot re-fetches
       # all current listings once (harmless one-off duplicate risk).
       - name: Restore database cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: berlin_flats.db
           key: berlin-flats-db-${{ github.run_id }}
@@ -52,7 +54,7 @@ jobs:
         env:
           # ── Required secrets (set under repo Settings → Secrets → Actions) ──
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
           SCRAPFLY_KEY: ${{ secrets.SCRAPFLY_KEY }}
 
           # ── Filter preferences (set under Settings → Variables → Actions) ──
@@ -68,7 +70,7 @@ jobs:
           FILTER_TAUSCHWOHNUNG: ${{ vars.FILTER_TAUSCHWOHNUNG }}
 
           # Channel posting is disabled in Actions mode — personal chat only.
-          CHANNEL_ID: ""
+          # CHANNEL_ID: ""
 
           LOG_LEVEL: INFO
         run: poetry run python -m bot.run_once
