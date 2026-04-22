@@ -3,6 +3,11 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
+_BERLIN_TZ = ZoneInfo("Europe/Berlin")
+_SCRAPE_HOUR_START = 8   # 08:00 CET/CEST inclusive
+_SCRAPE_HOUR_END = 20    # 20:00 CET/CEST exclusive
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest
@@ -102,6 +107,16 @@ async def _send_to_user(bot: Bot, user_id: int, listing: Listing) -> None:
 
 async def run_scrape_cycle(bot: Bot) -> None:
     """One full scrape-match-notify cycle. Called by the scheduler."""
+    now_berlin = datetime.now(_BERLIN_TZ)
+    if not (_SCRAPE_HOUR_START <= now_berlin.hour < _SCRAPE_HOUR_END):
+        logger.debug(
+            "Scrape skipped — outside active hours ({:02d}:{:02d} {}).",
+            now_berlin.hour,
+            now_berlin.minute,
+            now_berlin.tzname(),
+        )
+        return
+
     since = await get_last_scrape_at()
     cycle_start = datetime.now(timezone.utc)
     if since:

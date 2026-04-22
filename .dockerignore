@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.db-shm
+*.db-wal
+logs/
+.env
+.env.*
+!.env.example
+tests/
+.git/
+.gitignore
+Dockerfile
+fly.toml
+*.md
