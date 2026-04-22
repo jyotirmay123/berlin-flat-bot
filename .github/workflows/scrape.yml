@@ -1,0 +1,74 @@
+name: Scrape Berlin Flats
+
+on:
+  schedule:
+    # Every 30 min, 06:00–19:30 UTC.
+    # 06:xx UTC = 07:xx CET = 08:xx CEST  →  covers 08:00 Berlin open window all year.
+    # 19:xx UTC = 20:xx CET = 21:xx CEST  →  Python time-window check (08:00–19:59
+    #   Europe/Berlin) drops runs that fall outside; this just avoids waking the runner
+    #   in the middle of the night.
+    - cron: '*/30 6-19 * * *'
+  workflow_dispatch:  # manual trigger from Actions UI (useful for testing)
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Cache the poetry virtualenv keyed to the lock file so deps are
+      # only reinstalled when poetry.lock changes.
+      - name: Cache poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: poetry-${{ runner.os }}-${{ hashFiles('poetry.lock') }}
+
+      - name: Install poetry and dependencies
+        run: |
+          pip install --quiet poetry==1.8.5
+          poetry install --only main --no-root --no-interaction --quiet
+
+      # Persist the SQLite database across runs.
+      # Pattern: new key per run_id (so every run writes its state), restore
+      # from the most recent previous run via the prefix fallback.
+      # Cache expires after 7 days of no access — on expiry the bot re-fetches
+      # all current listings once (harmless one-off duplicate risk).
+      - name: Restore database cache
+        uses: actions/cache@v4
+        with:
+          path: berlin_flats.db
+          key: berlin-flats-db-${{ github.run_id }}
+          restore-keys: |
+            berlin-flats-db-
+
+      - name: Run scrape cycle
+        env:
+          # ── Required secrets (set under repo Settings → Secrets → Actions) ──
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SCRAPFLY_KEY: ${{ secrets.SCRAPFLY_KEY }}
+
+          # ── Filter preferences (set under Settings → Variables → Actions) ──
+          # Change these to tune what gets sent to you.
+          # Leave blank to use the default (no filter / "any").
+          FILTER_PERIOD: ${{ vars.FILTER_PERIOD }}
+          FILTER_LOCALITY: ${{ vars.FILTER_LOCALITY }}
+          FILTER_PRICE_MAX: ${{ vars.FILTER_PRICE_MAX }}
+          FILTER_PRICE_MIN: ${{ vars.FILTER_PRICE_MIN }}
+          FILTER_ROOMS_MIN: ${{ vars.FILTER_ROOMS_MIN }}
+          FILTER_ROOMS_MAX: ${{ vars.FILTER_ROOMS_MAX }}
+          FILTER_SPACE_MIN: ${{ vars.FILTER_SPACE_MIN }}
+          FILTER_TAUSCHWOHNUNG: ${{ vars.FILTER_TAUSCHWOHNUNG }}
+
+          # Channel posting is disabled in Actions mode — personal chat only.
+          CHANNEL_ID: ""
+
+          LOG_LEVEL: INFO
+        run: poetry run python -m bot.run_once
